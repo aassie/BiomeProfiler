@@ -52,6 +52,8 @@ function script_usage() {
 
        -c|--CountThreshold     Minimum read count threshold for samples
                                Default: 1000
+       
+       -p|--pandoc             Pandoc path if it is not installed in common place
 
        -v|--Verbose            Verbose mode
 
@@ -71,10 +73,7 @@ MetacycMeta=$DIR/Data/Metacyc.metadata.tsv
 #WB=$DIR/Data/WB.tsv
 KeggMeta=$DIR/Data/Kegg.metadata.tsv
 
-RunKegg=1
-RunMeta=1
-RunGFF=1
-RunHyp=1
+PANDOC=0
 STATS=0
 
 OUT="./WormBiom.Result/"
@@ -82,7 +81,6 @@ DEBUG=0
 
 CountThreshold=1000
 Tableopt1="BIOM"  # Default table type
-VERBOSE=0
 
 ## Options
 
@@ -132,8 +130,12 @@ while [ "$1" != "" ]; do
           shift
           CountThreshold=$1
           ;;
+        -p|--pandoc)
+          shift
+          PANDOC=$1
+          ;;
         -v|--Verbose)
-          VERBOSE=1
+          DEBUG=1
           ;;
         -st|--Stats)
           STATS=1
@@ -264,7 +266,7 @@ SourceDir=$DIR/R/WB.script.R
 echo here: $Tableopt1 $SourceDir $DEBUG $STATS
 echo
 #line for debug
-echo "Rscript $DIR/R/WB.R $ASVTable $ASVMeta $BlastResult $OUT $GMeta $KeggMeta $WB $Sel1 $SSUCount $DEBUG $STATS $CountThreshold $Tableopt1 $SourceDir"
+echo "Rscript $DIR/R/WB.R $ASVTable $ASVMeta $BlastResult $OUT $GMeta $KeggMeta $WB $Sel1 $SSUCount $DEBUG $STATS $CountThreshold $Tableopt1 $SourceDir $PANDOC"
 
 Rscript $DIR/R/WB.R \
     "$ASVTable" \
@@ -280,7 +282,8 @@ Rscript $DIR/R/WB.R \
     "$STATS" \
     "$CountThreshold" \
     "$Tableopt1" \
-    "$SourceDir"
+    "$SourceDir" \
+    "$PANDOC"
 echo
 echo "----"
 #Creating report

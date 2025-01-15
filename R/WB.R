@@ -23,6 +23,7 @@ STATS <- args[11]             # Performing stats on table
 count.threshold <- as.numeric(args[12]) # Count Threshold for removing a sample
 Tableopt1 <- args[13]         # ASV Count table type
 SourceDir <- args[14]         # Directory with accessory scripts
+PANDOCPATH <-args[15]         # Custom path for Pandoc
 
 ## Load extra scripts
 source(SourceDir)
@@ -30,7 +31,7 @@ source(SourceDir)
 # Check for required packages
 has_deseq2 <- requireNamespace("DESeq2", quietly = TRUE)
 has_phyloseq <- requireNamespace("phyloseq", quietly = TRUE)
-has_biocyc <- requireNamespace("BioCyc", quietly = TRUE)
+has_biocyc <- requireNamespace("BiocManager", quietly = TRUE)
 
 # Check for required packages and stop if missing
 missing_pkgs <- c()
@@ -38,13 +39,21 @@ if(!has_deseq2) missing_pkgs <- c(missing_pkgs, "DESeq2")
 if(!has_phyloseq) missing_pkgs <- c(missing_pkgs, "phyloseq")
 
 if(length(missing_pkgs) > 0) {
+    Gameover()
+    cat("/n")
     stop(paste0("Required packages missing. Please install:\n",
                 paste(" -", missing_pkgs, collapse="\n"), 
                 "\n\nUse BiocManager::install() to install these packages."))
 }
 
+# Verbose check
+if(VERBOSE==1){vstat="ON"}else{vstat="OFF"}
+cat(paste("VERBOSE IS SET TO",vstat,"\n"))
+
 # Warn about optional packages
-if(!has_biocyc && VERBOSE==1) {
+if(!has_biocyc) {
+    Gameover()
+    cat("/n")
     stop(cat("Note: BioCyc package not installed - please install the package\n"))
 }
 
@@ -227,10 +236,10 @@ D2<- as.data.frame(t(D)) %>%
 if(VERBOSE==1){cat("Plotting ASV\n")}
 if(VERBOSE==1){cat("----------------\n")}
 
-if(VERBOSE==1){
-  print("Sanity check")
-  print(head(D1))
-}
+#if(VERBOSE==1){
+#  print("Sanity check")
+#  print(head(D1))
+#}
 
 Bplot<-D1 %>% 
   rownames_to_column("X.SampleID") %>%
@@ -439,9 +448,9 @@ Genome.barplot<-ggplot(BplotD4, aes(x=X.SampleID, y=value, fill=Genome)) +
 ggsave(paste(out.folder, "ASV.genome.png", sep=""), Genome.barplot, device = "png",width = 20, height = 10, dpi=150)
 
 ## ASV to genome table
-cat("----------------\n")
-cat("Pathways section\n")
-cat("----------------\n")
+cat("--------------------------\n")
+cat("Genome Profile\n")
+cat("--------------------------\n")
 cat("\n")
 
 D5<-t(D3)
@@ -498,10 +507,16 @@ Genome.PCoa<-ggplot(GePCOplot, aes(x=V1, y=V2, col=get(selecteur1))) +
   scale_color_manual(values = getPalette(colourCount), name=paste(selecteur1))
 
 ggsave(paste(out.folder, "PCOA.Genome.results.png", sep=""), Genome.PCoa, device = "png", width = 10, height = 10, dpi=150)
+cat("\n")
 
 # Genome to Gene profiles
 
 ## Table generation profiles
+
+cat("--------------------------\n")
+cat("Generating Gene Profile\n")
+cat("--------------------------\n")
+cat("\n")
 
 PanGen<-WB %>%
   select(Genome, gene_cluster_id) %>%
@@ -516,15 +531,13 @@ PGdb2<-Pan.db[rownames(Pan.db) %in% rownames(D5),]
 
 ###MOST IMPORTANT STEP OF THE SCRIPT
 PG.results<-ASVtoFUNCTION(D5,PGdb2,out.folder,"Pangene")
-if(VERBOSE==1){cat("Saving table to:\n")}
-if(VERBOSE==1){cat(paste0(out.folder, "PanGene.profile.table.csv"),"\n")}
 if(VERBOSE==1){cat("----------------\n")}
 write.csv(x = PG.results,file = paste0(out.folder, "PanGene.profile.table.csv"))
 
 # PCoA based on pan gene distribution
 
 #PG.results=read.csv(paste0(out.folder, "PanGene.profile.table.csv"))
-PG.results=PG.results %>% column_to_rownames("X")
+#PG.results=PG.results %>% column_to_rownames("X")
 ## Generate PCoA plot of genomic composition
 if(VERBOSE==1){cat("Plotting PCoA from Genome Data\n")}
 if(VERBOSE==1){cat("----------------\n")}
@@ -541,7 +554,7 @@ PGplot<-merge(PGplot,M[,colnames(M)], by.x="ID", by.y="X.SampleID", all.x=T)
 PGeig1<- round(PGres2$eig[1]/sum(PGres2$eig)*100,2)
 PGeig2<- round(PGres2$eig[2]/sum(PGres2$eig)*100,2)
 
-PanGene.pcoa<-ggplot(PGplot, aes_string(x="V1", y="V2", col=selecteur1)) +
+PanGene.pcoa<-ggplot(PGplot, aes(x=V1, y=V2, col=get(selecteur1))) +
   geom_point()+
   theme_bw()+
   xlab(paste("Dimension 1", PGeig1, "%",sep=" "))+
@@ -551,30 +564,54 @@ PanGene.pcoa<-ggplot(PGplot, aes_string(x="V1", y="V2", col=selecteur1)) +
 
 ggsave(paste(out.folder,"PanGen.pcoa.png", sep=""), PanGene.pcoa, device = "png",width = 5, height = 5, dpi=150)
 
-# Generate HTML report
-if(VERBOSE==1){cat("Generating HTML report...\n")}
-PWD <- getwd() # Save current working directory
-rmarkdown::render(input = file.path(dirname(SourceDir), "Report.Rmd"),
-                 output_file = file.path(out.folder, "WormBiome_Report.html"),
-                 params = list(
-                   PWD = PWD,
-                   M = M,
-                   selecteur1 = selecteur1,
-                   Missing.sample.1 = Missing.sample.1,
-                   Missing.sample.2 = Missing.sample.2,
-                   count.threshold = count.threshold,
-                   Sample.filteredout.read = Sample.filteredout.read,
-                   Genome.present = Genome.present,
-                   Genome.absent = Genome.absent,
-                   null.row = null.row,
-                   null.col = null.col,
-                   SubRS = SubRS,
-                   MeanASV = MeanASV,
-                   ASV.barplot = ASV.barplot,
-                   ASV.PCoa = ASV.PCoa,
-                   out.folder = out.folder
-                 ),
-                 envir = environment())
+# After all analysis is complete, before report generation:
 
-if(VERBOSE==1){cat("Report generated successfully!\n")}
+# Check if we can generate HTML report
+can_generate_report <- rmarkdown::pandoc_available()
+
+if(!can_generate_report & PANDOCPATH!=0) {
+  if(VERBOSE==1){cat("Pandoc not found by default, checking provided path\n")}
+  rmarkdown::find_pandoc(dir = PANDOCPATH)
+  can_generate_report = TRUE 
+}
+
+if(can_generate_report) {
+    if(VERBOSE==1){cat("Generating HTML report...\n")}
+    # Get current working directory for report
+    PWD <- getwd()
+    
+    # Generate report
+    rmarkdown::render(input = file.path(dirname(SourceDir), "Report.Rmd"),
+                     output_file = paste0(PWD,"/",args[4], "/WormBiome_Report.html"),
+                     params = list(
+                       PWD = PWD,
+                       M = M,
+                       selecteur1 = selecteur1,
+                       Missing.sample.1 = Missing.sample.1,
+                       Missing.sample.2 = Missing.sample.2,
+                       count.threshold = count.threshold,
+                       Sample.filteredout.read = Sample.filteredout.read,
+                       Genome.present = Genome.present,
+                       Genome.absent = Genome.absent,
+                       null.row = null.row,
+                       null.col = null.col,
+                       SubRS = SubRS,
+                       MeanASV = MeanASV,
+                       ASV.barplot = ASV.barplot,
+                       ASV.PCoa = ASV.PCoa,
+                       out.folder = out.folder
+                     ),
+                     envir = environment())
+    if(VERBOSE==1){cat("Report generated successfully!\n")}
+} else {
+    warning("This bit is a real pain, it has to do with LATEx libraries and you are missing one\n",
+            "Pandoc (version 1.12.3 or higher) is required for HTML report generation.\n",
+            "Report generation skipped. All other results are available in the output folder.\n",
+            "To enable report generation, set the -p option or install pandoc: https://pandoc.org/installing.html")
+}
+
+# Script completion message
+if(VERBOSE==1){
+    cat("\nAnalysis complete! Results are available in:", out.folder, "\n")
+}
 

@@ -3,9 +3,6 @@ title: "Wormbiome pipeline Report"
 output: html_notebook
 ---
 
-```{R}
-
-```
 
 # Overview of your project
 
@@ -46,7 +43,6 @@ Both empty ASV and Sample were removed from the rest of the analysis.
 
 The ASV not mapping to any selected genomes represent `r sum(SubRS[,2])`% of the dataset.
 
-
 ```{R}
 setwd(PWD)
 Figure1<-ggpubr::ggarrange(ASV.barplot,ASV.PCoa, labels=c("A","B"))
@@ -62,15 +58,10 @@ The available genome in the database represents `r MeanASV`% of the diversity.
 setwd(PWD)
 knitr::include_graphics(paste(out.folder, "ASV.genome.png",sep=""), dpi = 72)
 ```
-# Metabolic prediction based on Metacyc reconstruction
+# Functional prediction 
 ```{R}
 setwd(PWD)
-knitr::include_graphics(paste(out.folder, "Metacyc.pcoa.png",sep=""), dpi = 72)
+knitr::include_graphics(paste(out.folder, "PanGen.pcoa.png",sep=""), dpi = 72)
 ```
 
 
-# Functional prediction based on KEGG annotations
-```{R}
-setwd(PWD)
-knitr::include_graphics(paste(out.folder, "Kegg.pcoa.png",sep=""), dpi = 72)
-```

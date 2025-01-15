@@ -1,29 +1,35 @@
 #Function ASV to gene profile
-ASVtoFUNCTION<-function(ASV.table, Function.table, out.folder,pref){
-  Single<-tibble()
-  All<-list()
-  Function.table<-as.data.frame(Function.table)
-  ASV.col<-ncol(ASV.table)
-  cur.col<-0
-  for (sample in colnames(ASV.table)){
-    cur.col<-cur.col+1
-    cat("Sample: ", cur.col, "/",ASV.col,"\n")
-    if(VERBOSE==1){cat(paste("Processing sample", sample,"\n"))}
-    Single=Function.table*ASV.table[,colnames(ASV.table)==sample]
-    tmp<-as.data.frame(colSums(Single))
-    Single<-tibble()
-    colnames(tmp)<-sample
-    All<-c(All,list(tmp))
-    if(VERBOSE==1){cat("---\n\n")
-      cat("")}
+ASVtoFUNCTION <- function(ASV.table, Function.table, out.folder, pref) {
+  if(VERBOSE==1){
+    cat("Processing", ncol(ASV.table), "samples\n")
+    cat("ASV table dimensions:", dim(ASV.table)[1], "x", dim(ASV.table)[2], "\n")
+    cat("Function table dimensions:", dim(Function.table)[1], "x", dim(Function.table)[2], "\n")
   }
-  PathwayList<-as.data.frame(All)
-  PathwayList[is.na(PathwayList)]<-0
-  P2<-PathwayList[!rowSums(PathwayList)==0,]
-  P2<-P2[,!colSums(P2)==0]
   
-  if(VERBOSE==1){cat("Writing ",pref," table to:")}
-  write.csv(P2, paste(out.folder, pref,".profile.table.csv", sep=""))
+  # Convert to matrices and ensure proper orientation
+  ASV.matrix <- as.matrix(ASV.table)
+  Function.matrix <- as.matrix(Function.table)
+  
+  # Pre-calculate the multiplication once
+  # Function.matrix should be genes x genomes, ASV.matrix should be genomes x samples
+  if(VERBOSE==1) cat("Calculating function profiles...\n")
+  result <- t(Function.matrix) %*% ASV.matrix
+  
+  # Convert to data frame and handle column names
+  PathwayList <- as.data.frame(result)
+  colnames(PathwayList) <- colnames(ASV.table)
+  rownames(PathwayList) <- colnames(Function.matrix)
+  
+  # Filter zero rows and columns
+  P2 <- PathwayList[rowSums(PathwayList) > 0, , drop = FALSE]
+  P2 <- P2[, colSums(P2) > 0, drop = FALSE]
+  
+  if(VERBOSE==1){
+    cat("Final matrix dimensions:", dim(P2)[1], "x", dim(P2)[2], "\n")
+    cat("Writing", pref, "table to:", paste0(out.folder, pref, ".profile.table.csv"), "\n")
+  }
+  write.csv(P2, paste0(out.folder, pref, ".profile.table.csv"), row.names = TRUE)
+  
   return(P2)
 }
 
