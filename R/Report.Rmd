@@ -1,0 +1,76 @@
+---
+title: "Wormbiome pipeline Report"
+output: html_notebook
+---
+
+```{R}
+
+```
+
+# Overview of your project
+
+## General stat from metadata
+
+You have submitted a metadata with `r ncol(M)-1` categories and you choosed to run stats on `r selecteur1`
+
+The following sample are in the metadata but not in the dataset:
+`r Missing.sample.1`
+
+The following sample are in the dataset but not in the metadata:
+`r Missing.sample.2`
+
+## Count quality
+
+The following were below the count threshold of `r count.threshold` reads: `r Sample.filteredout.read` and have been removed.
+
+## The genomes
+
+For you experiment you used a collection of `XGENOME`. 
+
+From those genomes, the pipeline found `r length(Genome.present)` genomes mapping to ASV present in your dataset. 
+
+`r length(Genome.absent)` are not present in the database yet. 
+Those are: `r Genome.absent`
+
+=====
+
+The following ASV sequences have no count:
+`r null.row`
+
+The following samples are empty:
+`r null.col`
+
+Both empty ASV and Sample were removed from the rest of the analysis.
+
+# Oveview of the ASV table
+
+The ASV not mapping to any selected genomes represent `r sum(SubRS[,2])`% of the dataset.
+
+
+```{R}
+setwd(PWD)
+Figure1<-ggpubr::ggarrange(ASV.barplot,ASV.PCoa, labels=c("A","B"))
+ggsave(filename = paste(out.folder, "Figure1.png", sep=""),plot = Figure1, device = "png",width = 20, height = 10, dpi=72)
+knitr::include_graphics(paste(out.folder, "Figure1.png",sep=""), dpi = 72)
+```
+
+# ASV matched to Genome
+
+The available genome in the database represents `r MeanASV`% of the diversity.
+
+```{R}
+setwd(PWD)
+knitr::include_graphics(paste(out.folder, "ASV.genome.png",sep=""), dpi = 72)
+```
+# Metabolic prediction based on Metacyc reconstruction
+```{R}
+setwd(PWD)
+knitr::include_graphics(paste(out.folder, "Metacyc.pcoa.png",sep=""), dpi = 72)
+```
+
+
+# Functional prediction based on KEGG annotations
+```{R}
+setwd(PWD)
+knitr::include_graphics(paste(out.folder, "Kegg.pcoa.png",sep=""), dpi = 72)
+```
