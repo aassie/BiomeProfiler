@@ -4,22 +4,21 @@
 #               Microbiome based on genome and 16S rRNA Amplicons
 # ------------------------------------------------------------------
 
-# Last update 29/02/24 -- V0.5
+# Last update 14/01/25 -- V1.0
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-VERSION=0.5
+VERSION=1.0
 SUBJECT=WormBiom
-USAGE="wormbiom.sh -a ASV-TABLE -m ASV-METADATA -s ASV-FASTA -b BACTERIALIST -o OUTFOLDER -s1 CATEGORY -t TABLETYPE [-v] [-st]"
+USAGE="wormbiom.sh -a ASV-TABLE -m ASV-METADATA -s ASV-FASTA -b BACTERIALIST -w WB-DATABASE -o OUTFOLDER -s1 CATEGORY -t TABLETYPE [-v] [-st]"
 set -e
 
-date
-
+# Define script usage function first
 function script_usage() {
     cat << EOF
     __        __                   ____  _
     \ \      / /__  _ __ _ __ ___ | __ )(_) ___  _ __ ___   ___
-     \ \ /\ / / _ \| '__| '_ \` _ \|  _ \| |/ _ \| '_ \` _ \ / _ \
+     \ \ /\ / / _ \| '__| '_ \` _ \|  _ \| |/ _ \| '_ \` _ \ / _ \ 
       \ V  V / (_) | |  | | | | | | |_) | | (_) | | | | | |  __/
        \_/\_/ \___/|_|  |_| |_| |_|____/|_|\___/|_| |_| |_|\___|
     =====================================================================
@@ -39,6 +38,8 @@ function script_usage() {
 
        -b|--BacteriaList       Required. Collection Name or list of bacteria
                                name used in the experiment. One per line
+
+       -w|--wbdb              Required. Path to WormBiome genome database
 
        -o|--OutFolder          Output folder
                                Default: ./OUT/
@@ -67,8 +68,8 @@ SSUSeq=$DIR/Data/16S.sequences.fasta
 MetacycDB=$DIR/Data/Metacyc.database.tsv
 MetacycMeta=$DIR/Data/Metacyc.metadata.tsv
 
-WB=$DIR/Data/WB.tsv
-KeggMeta=$DIR/Data/Kegg.metadata.csv
+#WB=$DIR/Data/WB.tsv
+KeggMeta=$DIR/Data/Kegg.metadata.tsv
 
 RunKegg=1
 RunMeta=1
@@ -88,61 +89,117 @@ VERBOSE=0
 WBoption2=NULL
 BNAME=$(date +%Y%m%d)
 
+## Options parsing
 while [ "$1" != "" ]; do
-  case $1 in
-      -h|--help)
-       script_usage
-       exit 0
-       ;;
-     -a|--ASVtable)
-       shift
-       ASVTable=$1
-       ;;
-     -m|--ASVmeta)
-       shift
-       ASVMeta=$1
-       ;;
-     -s|--ASVsequence)
-       shift
-       ASVsequence=$1
-       ;;
-     -b|--BacteriaList)
-       shift
-       BACList=$1
-       ;;
-     -o|--OutFolder)
-       shift
-       OUT=$1
-       ;;
-     -s1|--Selector1)
-       shift
-       Sel1=$1
-       ;;
-     -t|--TableType)
-       shift
-       Tableopt1=$1
-       ;;
-     -c|--CountThreshold)
-       shift
-       CountThreshold=$1
-       ;;
-     -v|--Verbose)
-       VERBOSE=1
-       ;;
-     -st|--Stats)
-       STATS=1
-       ;;
-      *)
-       echo "Invalid command: no parameter included with argument $1"
-       exit 1
-       ;;
-  esac
-  shift
+    case $1 in
+        -h|--help)
+         script_usage
+         exit 0
+         ;;
+        -a|--ASVtable)
+          shift
+          ASVTable=$1
+          ;;
+        -m|--ASVmeta)
+          shift
+          ASVMeta=$1
+          ;;
+        -s|--ASVsequence)
+          shift
+          ASVsequence=$1
+          ;;
+        -b|--BacteriaList)
+          shift
+          BACList=$1
+          ;;
+        -w|--wbdb)
+            shift
+            WB=$1
+            ;;
+        -o|--OutFolder)
+          shift
+          OUT=$1
+          ;;
+        -s1|--Selector1)
+          shift
+          Sel1=$1
+          ;;
+        -t|--TableType)
+          shift
+          Tableopt1=$1
+          ;;
+        -c|--CountThreshold)
+          shift
+          CountThreshold=$1
+          ;;
+        -v|--Verbose)
+          VERBOSE=1
+          ;;
+        -st|--Stats)
+          STATS=1
+          ;;
+         *)
+          echo "Invalid command: no parameter included with argument $1"
+          exit 1
+          ;;
+    esac
+    shift
 done
 
+# AFTER options parsing, check required arguments
+REQUIRED_ARGS=( 
+    "ASVTable:(-a|--ASVtable)" 
+    "ASVMeta:(-m|--ASVmeta)" 
+    "ASVsequence:(-s|--ASVsequence)" 
+    "BACList:(-b|--BacteriaList)"
+    "WB:(-w|--wbdb)"
+)
+
+# Function to check required arguments
+check_required_args() {
+    local missing=()
+    for arg in "${REQUIRED_ARGS[@]}"; do
+        local var_name="${arg%%:*}"
+        local opt_name="${arg#*:}"
+        if [ -z "${!var_name}" ]; then
+            missing+=("$opt_name")
+        fi
+    done
+
+    if [ ${#missing[@]} -ne 0 ]; then
+        echo "Error: Missing required arguments:"
+        printf '%s\n' "${missing[@]}"
+        echo
+        echo "use -h option for help"
+        exit 1
+    fi
+}
+
+# Now check arguments after they've been parsed
+check_required_args
+
+# Validate input files exist
+for file in "$ASVTable" "$ASVMeta" "$ASVsequence"; do
+    if [ ! -f "$file" ]; then
+        echo "Error: File does not exist: $file"
+        exit 1
+    fi
+done
+
+# Validate table type
+if [[ ! "$Tableopt1" =~ ^(BIOM|TSV|CSV)$ ]]; then
+    echo "Error: Invalid table type '$Tableopt1'. Must be one of: BIOM, TSV, CSV"
+    exit 1
+fi
+
+# If we get here, all required arguments are present and valid
+echo "All required arguments provided and validated"
+echo "----"
+
+date 
+
+#Creating out folder
 mkdir -p $OUT
-REFMissing=$OUT/Blast.missing.reference.txt
-REFsequence=$DIR/Data/Collection/$BACList\.fasta
 
 #Checking for Blast
 echo "Looking for Blast"
@@ -176,16 +233,15 @@ else echo "Creating Bacteria Collection";
   report1=$(grep -c "^" $BACList)
   if ls $REFMissing 1> /dev/null 2>&1; then report2=$(grep -c "^" $REFMissing); else report2=0; fi
   echo $report2"/"$report1" were missing in the reference"
+  gsed -i "s/ /\n/g" $REFsequence
 fi
 echo
-
-sed -i "s/ /\n/g" $REFsequence
 
 echo "----"
 #Checking Blast Database
 echo "Checking Blast Database"
 echo
-if ls $DIR/BlastDB/$BNAME 1> /dev/null 2>&1;
+if ls $DIR/BlastDB/$BNAME* 1> /dev/null 2>&1;
   then echo "Found Blast database, using it." ;
 else echo "Blast database not found, creating...";
     makeblastdb -dbtype nucl -in $REFsequence -title $BNAME -out $DIR/BlastDB/$BNAME;
@@ -229,3 +285,4 @@ echo
 echo "----"
 #Creating report
 #TBA
+

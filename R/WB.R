@@ -5,6 +5,28 @@ message(sprintf("Running Wormbiom R script\n"))
 options(error = quote({dump.frames(to.file=TRUE); q()}))
 set.seed(123)
 
+## Get script arguments
+args <- commandArgs(trailingOnly=TRUE)
+
+## Set data location for loading
+Data.location <- args[1]      # ASVTable
+Meta.location <- args[2]      # ASVMeta  
+Bin.location <- args[3]       # BlastResult
+out.folder <- paste("./",args[4],"/",sep="")  # Output folder
+GenomeDB.location <- args[5]  # Genome Metadata
+KO.meta.location <- args[6]   # KeggMeta
+WB.location <- args[7]        # Genome Database
+selecteur1 <- args[8]         # Column to use as comparator
+SSU_Count.location <- args[9] # SSUCount
+VERBOSE <- args[10]           # DEBUG
+STATS <- args[11]             # Performing stats on table
+count.threshold <- as.numeric(args[12]) # Count Threshold for removing a sample
+Tableopt1 <- args[13]         # ASV Count table type
+SourceDir <- args[14]         # Directory with accessory scripts
+
+## Load extra scripts
+source(SourceDir)
+
 # Check for required packages
 has_deseq2 <- requireNamespace("DESeq2", quietly = TRUE)
 has_phyloseq <- requireNamespace("phyloseq", quietly = TRUE)
@@ -42,28 +64,6 @@ cat("------------------\n")
 cat("Preparing Analysis\n")
 cat("------------------\n")
 cat("\n")
-
-## Get script arguments
-args <- commandArgs(trailingOnly=TRUE)
-
-## Set data location for loading
-Data.location <- args[1]      # ASVTable
-Meta.location <- args[2]      # ASVMeta  
-Bin.location <- args[3]       # BlastResult
-out.folder <- paste("./",args[4],"/",sep="")  # Output folder
-GenomeDB.location <- args[5]  # Genome Metadata
-KO.meta.location <- args[6]   # KeggMeta
-WB.location <- args[7]        # Genome Database
-selecteur1 <- args[8]         # Column to use as comparator
-SSU_Count.location <- args[9] # SSUCount
-VERBOSE <- args[10]           # DEBUG
-STATS <- args[11]             # Performing stats on table
-count.threshold <- as.numeric(args[12]) # Count Threshold for removing a sample
-Tableopt1 <- args[13]         # ASV Count table type
-SourceDir <- args[14]         # Directory with accessory scripts
-
-## Load extra scripts
-source(SourceDir)
 
 # Update debug message to match new argument order
 if(VERBOSE==1){
@@ -115,7 +115,6 @@ if(Tableopt1=="CSV"){
 
 colnames(M)[1]<-"X.SampleID"
 M$X.SampleID<-make.names(M$X.SampleID)
-M<-M %>% filter(!Gut.Type %in% c("Mutant","Tbd"))
 
 ### Checking if samples are present in meta data and vice versa
 
@@ -221,12 +220,18 @@ if(VERBOSE==1){cat("Merging Metadata\n")}
 selectors<-c("X.SampleID",selecteur1)
 D2<- as.data.frame(t(D)) %>% 
   rownames_to_column("X.SampleID") %>% 
-  left_join(M %>% select(c(selectors))) 
+  left_join(M %>% select(all_of(selectors))) 
 ## Plots
 
 ### Taxonomy plots
 if(VERBOSE==1){cat("Plotting ASV\n")}
 if(VERBOSE==1){cat("----------------\n")}
+
+if(VERBOSE==1){
+  print("Sanity check")
+  print(head(D1))
+}
+
 Bplot<-D1 %>% 
   rownames_to_column("X.SampleID") %>%
   pivot_longer(!X.SampleID, names_to = "variable", values_to = "value") %>% 
