@@ -426,7 +426,7 @@ cat("-------------------\n")
 cat("\n")
 
 if(VERBOSE==1){cat("Writing ASV table to:\n")}
-write.csv(All1, paste(out.folder, "NEW.ASV.to.Genome.table.csv", sep=""))
+write.csv(All1, paste(out.folder, "Genome.table.csv", sep=""))
 
 BplotD4<-D3 %>% 
   rownames_to_column("X.SampleID") %>% 
@@ -562,7 +562,7 @@ PanGene.pcoa<-ggplot(PGplot, aes(x=V1, y=V2, col=get(selecteur1))) +
   ggtitle("Principal Coordinates Analysis of Pangene Profiles Predictions")+
   scale_color_manual(values = getPalette(colourCount), name=paste(selecteur1))
 
-ggsave(paste(out.folder,"PanGen.pcoa.png", sep=""), PanGene.pcoa, device = "png",width = 5, height = 5, dpi=150)
+ggsave(paste(out.folder,"PCOA.PanGen.png", sep=""), PanGene.pcoa, device = "png",width = 5, height = 5, dpi=150)
 
 # After all analysis is complete, before report generation:
 

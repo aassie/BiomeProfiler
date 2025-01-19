@@ -46,8 +46,8 @@ The ASV not mapping to any selected genomes represent `r sum(SubRS[,2])`% of the
 ```{R}
 setwd(PWD)
 Figure1<-ggpubr::ggarrange(ASV.barplot,ASV.PCoa, labels=c("A","B"))
-ggsave(filename = paste(out.folder, "Figure1.png", sep=""),plot = Figure1, device = "png",width = 20, height = 10, dpi=72)
-knitr::include_graphics(paste(out.folder, "Figure1.png",sep=""), dpi = 72)
+ggsave(filename = paste(out.folder, "Report.Figure1.png", sep=""),plot = Figure1, device = "png",width = 20, height = 10, dpi=72)
+knitr::include_graphics(paste(out.folder, "Report.Figure1.png",sep=""), dpi = 72)
 ```
 
 # ASV matched to Genome
